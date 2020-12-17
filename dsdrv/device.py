@@ -16,7 +16,7 @@ else:
     S16LE = Struct("<h")
 
 
-class DS4Report(object):
+class DSReport(object):
     __slots__ = ["left_analog_x",
                  "left_analog_y",
                  "right_analog_x",
@@ -66,16 +66,17 @@ class DS4Report(object):
             setattr(self, self.__slots__[i], value)
 
 
-class DS4Device(object):
-    """A DS4 controller object.
+class DSDevice(object):
+    """A DS controller object.
 
     Used to control the device functions and reading HID reports.
     """
 
-    def __init__(self, device_name, device_addr, type):
+    def __init__(self, device_name, device_addr, type, gen):
         self.device_name = device_name
         self.device_addr = device_addr
         self.type = type
+        self.gen = gen
 
         self._led = (0, 0, 0)
         self._led_flash = (0, 0)
@@ -151,7 +152,7 @@ class DS4Device(object):
         """Parse a buffer containing a HID report."""
         dpad = buf[5] % 16
 
-        return DS4Report(
+        return DSReport(
             # Left analog stick
             buf[1], buf[2],
 
@@ -219,7 +220,7 @@ class DS4Device(object):
         pass
 
     def set_operational(self):
-        """Tells the DS4 controller we want full HID reports."""
+        """Tells the DS controller we want full HID reports."""
         pass
 
     def close(self):

@@ -2,6 +2,7 @@ import sys
 import signal
 
 from threading import Thread
+import evdev
 
 from .actions import ActionRegistry
 from .backends import BluetoothBackend, HidrawBackend
@@ -11,7 +12,7 @@ from .eventloop import EventLoop
 from .exceptions import BackendError
 
 
-class DS4Controller(object):
+class DSController(object):
     def __init__(self, index, options, dynamic=False):
         self.index = index
         self.dynamic = dynamic
@@ -123,7 +124,7 @@ class DS4Controller(object):
 
 
 def create_controller_thread(index, controller_options, dynamic=False):
-    controller = DS4Controller(index, controller_options, dynamic=dynamic)
+    controller = DSController(index, controller_options, dynamic=dynamic)
 
     thread = Thread(target=controller.run)
     thread.controller = controller
@@ -203,7 +204,6 @@ def main():
                                               options.default_controller,
                                               dynamic=True)
             threads.append(thread)
-
         thread.controller.setup_device(device)
 
 if __name__ == "__main__":

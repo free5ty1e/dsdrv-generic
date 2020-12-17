@@ -10,16 +10,17 @@ from pyudev import Context, Monitor
 
 from ..backend import Backend
 from ..exceptions import DeviceError
-from ..device import DS4Device
+from ..device import DSDevice
 from ..utils import zero_copy_slice
+from ..controllers import controllers, determineGenerationHidraw
 
 
 IOC_RW = 3221243904
-HIDIOCSFEATURE = lambda size: IOC_RW | (0x06 << 0) | (size << 16)
-HIDIOCGFEATURE = lambda size: IOC_RW | (0x07 << 0) | (size << 16)
+def HIDIOCSFEATURE(size): return IOC_RW | (0x06 << 0) | (size << 16)
+def HIDIOCGFEATURE(size): return IOC_RW | (0x07 << 0) | (size << 16)
 
 
-class HidrawDS4Device(DS4Device):
+class HidrawDSDevice(DSDevice):
     def __init__(self, name, addr, type, hidraw_device, event_device):
         try:
             self.report_fd = os.open(hidraw_device, os.O_RDWR | os.O_NONBLOCK)
@@ -30,8 +31,10 @@ class HidrawDS4Device(DS4Device):
             raise DeviceError(err)
 
         self.buf = bytearray(self.report_size)
+        self.gen = determineGenerationHidraw(self.input_device)
 
-        super(HidrawDS4Device, self).__init__(name, addr, type)
+        super(HidrawDSDevice, self).__init__(
+            name, addr, type, self.gen)
 
     def read_report(self):
         try:
@@ -77,7 +80,7 @@ class HidrawDS4Device(DS4Device):
             pass
 
 
-class HidrawBluetoothDS4Device(HidrawDS4Device):
+class HidrawBluetoothDSDevice(HidrawDSDevice):
     __type__ = "bluetooth"
 
     report_size = 78
@@ -87,7 +90,7 @@ class HidrawBluetoothDS4Device(HidrawDS4Device):
         self.read_feature_report(0x02, 37)
 
 
-class HidrawUSBDS4Device(HidrawDS4Device):
+class HidrawUSBDSDevice(HidrawDSDevice):
     __type__ = "usb"
 
     report_size = 64
@@ -104,9 +107,9 @@ class HidrawUSBDS4Device(HidrawDS4Device):
 
 
 HID_DEVICES = {
-    "Sony Interactive Entertainment Wireless Controller": HidrawUSBDS4Device,
-    "Sony Computer Entertainment Wireless Controller": HidrawUSBDS4Device,
-    "Wireless Controller": HidrawBluetoothDS4Device,
+    "Sony Interactive Entertainment Wireless Controller": HidrawUSBDSDevice,
+    "Sony Computer Entertainment Wireless Controller": HidrawUSBDSDevice,
+    "Wireless Controller": HidrawBluetoothDSDevice,
 }
 
 
@@ -160,7 +163,6 @@ class HidrawBackend(Backend):
             else:
                 continue
 
-
             try:
                 device_addr = hid_device.get("HID_UNIQ", "").upper()
                 if device_addr:
@@ -176,4 +178,4 @@ class HidrawBackend(Backend):
                           event_device=event_device)
 
             except DeviceError as err:
-                self.logger.error("Unable to open DS4 device: {0}", err)
+                self.logger.error("Unable to open DS device: {0}", err)
