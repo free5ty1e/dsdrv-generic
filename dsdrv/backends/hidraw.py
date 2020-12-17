@@ -19,7 +19,6 @@ IOC_RW = 3221243904
 def HIDIOCSFEATURE(size): return IOC_RW | (0x06 << 0) | (size << 16)
 def HIDIOCGFEATURE(size): return IOC_RW | (0x07 << 0) | (size << 16)
 
-
 class HidrawDSDevice(DSDevice):
     report_size = 0
     valid_report_id = 0
@@ -34,10 +33,10 @@ class HidrawDSDevice(DSDevice):
             raise DeviceError(err)
 
         self.buf = bytearray(self.report_size)
-        self.gen = determineGenerationHidraw(self.input_device)
+        self.controller = determineGenerationHidraw(self.input_device)
 
         super(HidrawDSDevice, self).__init__(
-            name, addr, type, self.gen)
+            name, addr, type, self.controller)
 
     def read_report(self):
         try:
@@ -55,9 +54,16 @@ class HidrawDSDevice(DSDevice):
 
         if self.type == "bluetooth":
             # Cut off bluetooth data
-            buf = zero_copy_slice(self.buf, 2)
+            if (self.controller.value.bluetoothOffset > 0):
+                buf = zero_copy_slice(self.buf, self.controller.value.bluetoothOffset)
+            else:
+                buf = self.buf
         else:
-            buf = self.buf
+            # Or USB data, depending on the offset
+            if (self.controller.value.bluetoothOffset < 0):
+                buf = zero_copy_slice(self.buf, abs(self.controller.value.bluetoothOffset))
+            else:
+                buf = self.buf
 
         return self.parse_report(buf)
 
@@ -88,23 +94,16 @@ class HidrawBluetoothDSDevice(HidrawDSDevice):
 
     @property
     def valid_report_id(self):
-        if (self.gen == controllers.DualSense):
+        if (self.controller == controllers.DualSense):
             return 0x31
-        if (self.gen == controllers.DualShock4):
+        if (self.controller == controllers.DualShock4):
             return 0x11
         return -1
 
     report_size = 78
 
-    def getOP(self):
-        if (self.gen == controllers.DualShock4):
-            return 0x02
-        elif (self.gen == controllers.DualSense):
-            return 0x09
-        return 0x0
-
     def set_operational(self):
-        self.read_feature_report(self.getOP(), 37)
+        self.read_feature_report(self.controller.value.set_operational_op, 37)
 
 class HidrawUSBDSDevice(HidrawDSDevice):
     __type__ = "usb"
@@ -112,16 +111,9 @@ class HidrawUSBDSDevice(HidrawDSDevice):
     report_size = 64
     valid_report_id = 0x01
 
-    def getAddrOP(self):
-        if (self.gen == controllers.DualSense):
-            return 0x09
-        elif (self.gen == controllers.DualShock4):
-            return 0x81
-        return 0x0
-
     def set_operational(self):
         # Get the bluetooth MAC
-        addr = self.read_feature_report(self.getAddrOP(), 6)[1:]
+        addr = self.read_feature_report(self.controller.value.get_bt_mac_op, 6)[1:]
         addr = ["{0:02x}".format(c) for c in bytearray(addr)]
         addr = ":".join(reversed(addr)).upper()
 
