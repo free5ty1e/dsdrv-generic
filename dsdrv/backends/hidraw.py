@@ -89,6 +89,12 @@ class HidrawBluetoothDSDevice(HidrawDSDevice):
     def set_operational(self):
         self.read_feature_report(0x02, 37)
 
+def getAddrOP(gen):
+    if (gen == controllers.DualSense):
+        return 0x09
+    elif (gen == controllers.DualShock4):
+        return 0x81
+    return 0x0
 
 class HidrawUSBDSDevice(HidrawDSDevice):
     __type__ = "usb"
@@ -98,7 +104,7 @@ class HidrawUSBDSDevice(HidrawDSDevice):
 
     def set_operational(self):
         # Get the bluetooth MAC
-        addr = self.read_feature_report(0x81, 6)[1:]
+        addr = self.read_feature_report(getAddrOP(self.gen), 6)[1:]
         addr = ["{0:02x}".format(c) for c in bytearray(addr)]
         addr = ":".join(reversed(addr)).upper()
 
@@ -158,6 +164,7 @@ class HidrawBackend(Backend):
 
             for child in hid_device.parent.children:
                 event_device = child.get("DEVNAME", "")
+
                 if event_device.startswith("/dev/input/event"):
                     break
             else:
