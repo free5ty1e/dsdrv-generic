@@ -21,6 +21,9 @@ def HIDIOCGFEATURE(size): return IOC_RW | (0x07 << 0) | (size << 16)
 
 
 class HidrawDSDevice(DSDevice):
+    report_size = 0
+    valid_report_id = 0
+
     def __init__(self, name, addr, type, hidraw_device, event_device):
         try:
             self.report_fd = os.open(hidraw_device, os.O_RDWR | os.O_NONBLOCK)
@@ -83,8 +86,15 @@ class HidrawDSDevice(DSDevice):
 class HidrawBluetoothDSDevice(HidrawDSDevice):
     __type__ = "bluetooth"
 
+    @property
+    def valid_report_id(self):
+        if (self.gen == controllers.DualSense):
+            return 0x31
+        if (self.gen == controllers.DualShock4):
+            return 0x11
+        return -1
+
     report_size = 78
-    valid_report_id = 0x11
 
     def getOP(self):
         if (self.gen == controllers.DualShock4):
