@@ -86,15 +86,15 @@ class HidrawBluetoothDSDevice(HidrawDSDevice):
     report_size = 78
     valid_report_id = 0x11
 
-    def set_operational(self):
-        self.read_feature_report(0x02, 37)
+    def getOP(self):
+        if (self.gen == controllers.DualShock4):
+            return 0x02
+        elif (self.gen == controllers.DualSense):
+            return 0x09
+        return 0x0
 
-def getAddrOP(gen):
-    if (gen == controllers.DualSense):
-        return 0x09
-    elif (gen == controllers.DualShock4):
-        return 0x81
-    return 0x0
+    def set_operational(self):
+        self.read_feature_report(self.getOP(), 37)
 
 class HidrawUSBDSDevice(HidrawDSDevice):
     __type__ = "usb"
@@ -102,9 +102,16 @@ class HidrawUSBDSDevice(HidrawDSDevice):
     report_size = 64
     valid_report_id = 0x01
 
+    def getAddrOP(self):
+        if (self.gen == controllers.DualSense):
+            return 0x09
+        elif (self.gen == controllers.DualShock4):
+            return 0x81
+        return 0x0
+
     def set_operational(self):
         # Get the bluetooth MAC
-        addr = self.read_feature_report(getAddrOP(self.gen), 6)[1:]
+        addr = self.read_feature_report(self.getAddrOP(), 6)[1:]
         addr = ["{0:02x}".format(c) for c in bytearray(addr)]
         addr = ":".join(reversed(addr)).upper()
 

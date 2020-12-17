@@ -234,4 +234,4 @@ class DSDevice(object):
         elif self.type == "usb":
             type_name = "USB"
 
-        return "{0} Controller ({1})".format(type_name, self.device_name)
+        return "{} {} Controller ({})".format(type_name, self.gen.name, self.device_name)
