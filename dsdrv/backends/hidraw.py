@@ -54,14 +54,14 @@ class HidrawDSDevice(DSDevice):
 
         if self.type == "bluetooth":
             # Cut off bluetooth data
-            if (self.controller.value.bluetoothOffset > 0):
-                buf = zero_copy_slice(self.buf, self.controller.value.bluetoothOffset)
+            if (self.controller.value.bluetoothOffset_in > 0):
+                buf = zero_copy_slice(self.buf, self.controller.value.bluetoothOffset_in)
             else:
                 buf = self.buf
         else:
             # Or USB data, depending on the offset
-            if (self.controller.value.bluetoothOffset < 0):
-                buf = zero_copy_slice(self.buf, abs(self.controller.value.bluetoothOffset))
+            if (self.controller.value.bluetoothOffset_in < 0):
+                buf = zero_copy_slice(self.buf, abs(self.controller.value.bluetoothOffset_in))
             else:
                 buf = self.buf
 

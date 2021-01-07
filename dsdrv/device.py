@@ -1,6 +1,8 @@
 import math
-from struct import Struct
+from zlib import crc32
+from struct import Struct, pack
 from sys import version_info as sys_version
+from .controllers import controllers, controller
 
 class StructHack(Struct):
     """Python <2.7.4 doesn't support struct unpack from bytearray."""
@@ -66,6 +68,14 @@ class DSReport(object):
         for i, value in enumerate(args):
             setattr(self, self.__slots__[i], value)
 
+def hashcrc32(report_id, pkt: bytearray):
+    """Add a crc32 hash to the given report
+    """
+    crcpos = len(pkt)-4
+    hash = (crc32(bytearray([report_id]) + pkt) % (1<<32)).to_bytes(4, "big")
+    for i in range(4):
+        pkt[crcpos+i] = hash[i]
+
 
 class DSDevice(object):
     """A DS controller object.
@@ -73,11 +83,11 @@ class DSDevice(object):
     Used to control the device functions and reading HID reports.
     """
 
-    def __init__(self, device_name, device_addr, type, gen):
+    def __init__(self, device_name, device_addr, type, controller):
         self.device_name = device_name
         self.device_addr = device_addr
         self.type = type
-        self.controller = gen
+        self.controller = controller
 
         self._led = (0, 0, 0)
         self._led_flash = (0, 0)
@@ -120,15 +130,15 @@ class DSDevice(object):
                 led_red=0, led_green=0, led_blue=0,
                 flash_led1=0, flash_led2=0):
         if self.type == "bluetooth":
-            pkt = bytearray(77)
-            pkt[0] = 128
+            pkt = bytearray(self.controller.value.output_report_size[1])
+            pkt[0] = self.controller.value.output_report_id[1]
             pkt[2] = 255
-            offset = 2
+            offset = self.controller.value.bluetoothOffset_out
             report_id = 0x11
 
         elif self.type == "usb":
-            pkt = bytearray(31)
-            pkt[0] = 255
+            pkt = bytearray(self.controller.value.output_report_size[0])
+            pkt[0] = self.controller.value.output_report_id[0]
             offset = 0
             report_id = 0x05
 
@@ -137,15 +147,18 @@ class DSDevice(object):
         pkt[offset+4] = min(big_rumble, 255)
 
         # LED (red, green, blue)
-        pkt[offset+5] = min(led_red, 255)
-        pkt[offset+6] = min(led_green, 255)
-        pkt[offset+7] = min(led_blue, 255)
+        pkt[offset+self.controller.value.led_bit] = min(led_red, 255)
+        pkt[offset+self.controller.value.led_bit+1] = min(led_green, 255)
+        pkt[offset+self.controller.value.led_bit+2] = min(led_blue, 255)
 
         # Time to flash bright (255 = 2.5 seconds)
         pkt[offset+8] = min(flash_led1, 255)
 
         # Time to flash dark (255 = 2.5 seconds)
         pkt[offset+9] = min(flash_led2, 255)
+
+        if (self.controller == controllers.DualSense):
+            hashcrc32(report_id ,pkt)
 
         self.write_report(report_id, pkt)
 

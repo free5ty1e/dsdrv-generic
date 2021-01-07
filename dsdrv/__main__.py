@@ -161,10 +161,10 @@ def main():
     except ValueError as err:
         Daemon.exit("Failed to parse options: {0}", err)
 
-    if options.hidraw:
-        backend = HidrawBackend(Daemon.logger)
-    else:
+    if options.__dict__["no_hidraw"]:
         backend = BluetoothBackend(Daemon.logger)
+    else:
+        backend = HidrawBackend(Daemon.logger)
 
     try:
         backend.setup()
