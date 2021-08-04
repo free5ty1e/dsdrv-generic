@@ -37,23 +37,99 @@ class Message(list):
         self[8:12] = bytes(struct.pack('<I', crc))
 
 
+class Registration:
+    def __init__(self, mode=0, slot=None, mac=None):
+        self.mode = mode
+        self.slot = slot
+
+        self.mac = None
+
+        if mac:
+            self.mac = ':'.join(hex(b)[2:].zfill(2) for b in mac).upper()
+
+        self.refresh()
+
+    @property
+    def timed_out(self):
+        return time() - self.ts > 5
+
+    def refresh(self):
+        self.ts = time()
+
+    @property
+    def mode_str(self):
+        if self.mode == 0:
+            return 'all'
+        elif self.mode == 1:
+            return 'slot={}'.format(self.slot)
+        elif self.mode == 2:
+            return 'mac={}'.format(self.mac)
+        else:
+            return 'unknown'
+
+    def match(self, index, controller):
+        if self.mode == 0:
+            return True
+
+        if self.mode == 1 and index == self.slot:
+            return True
+
+        if self.mode == 2 and controller.device.device_addr == self.mac:
+            return True
+
+        return False
+
+
 class UDPServer:
     def __init__(self, host='', port=26760):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((host, port))
-        self.counter = 0
         self.clients = dict()
         self.remap = False
         self.send_touch = True
+        self.controllers = {}
+        self.counters = {}
+
+    def register_controller(self, controller):
+        index = controller.index - 1
+
+        self.controllers[index] = controller
+        self.counters[index] = 0
+
+        def handle_report(report):
+            self.report(index, controller, report)
+
+        controller.loop.register_event("device-report", handle_report)
+
+    def _slot_info(self, index):
+        mac = [0x00, 0x00, 0x00, 0x00, 0x00, 0xff] # 00:00:00:00:00:FF
+        conn_type = 0
+        state = 0
+
+        controller = None
+
+        if index in self.controllers:
+            controller = self.controllers[index]
+
+        if controller and controller.device:
+            mac = [int('0x' + i, 16)
+                   for i in controller.device.device_addr.split(':')]
+
+            state = 2
+            conn_type = 2 if controller.device.type == 'bluetooth' else 1
+
+        return [
+            index,  # pad id
+            state,
+            0x02,  # gyro (full gyro)
+            conn_type,  # connection type,
+            *mac,  # MAC,
+            0xef,  # battery (charged) TODO
+        ]
 
     def _res_ports(self, index):
         return Message('ports', [
-            index,  # pad id
-            0x02,  # state (connected)
-            0x02,  # gyro (full gyro)
-            0x01,  # connection type (usb)
-            0x00, 0x00, 0x00, 0x00, 0x00, 0xff,  # MAC 00:00:00:00:00:FF
-            0xef,  # battery (charged)
+            *self._slot_info(index),
             0x00,  # ?
         ])
 
@@ -63,30 +139,32 @@ class UDPServer:
 
     def _req_ports(self, message, address):
         requests_count = struct.unpack("<i", message[20:24])[0]
+
         for i in range(requests_count):
             index = self._compat_ord(message[24 + i])
 
-            if (index != 0):  # we have only one controller
+            if (index > len(self.controllers) - 1):
                 continue
 
             self.sock.sendto(bytes(self._res_ports(index)), address)
 
     def _req_data(self, message, address):
-        flags = self._compat_ord(message[24])
-        reg_id = self._compat_ord(message[25])
-        # reg_mac = message[26:32]
+        mode = self._compat_ord(message[20])
+        slot = self._compat_ord(message[21])
+        mac = message[22:28]
 
-        if flags == 0 and reg_id == 0:  # TODO: Check MAC
-            if address not in self.clients:
-                print('[udp] Client connected: {0[0]}:{0[1]}'.format(address))
+        if address not in self.clients:
+            reg = Registration(mode, slot, mac)
+            self.clients[address] = reg
+            print('[udp] Client connected: {0[0]}:{0[1]} (mode: {1})'.format(address, reg.mode_str))
+        else:
+            self.clients[address].refresh()
 
-            self.clients[address] = time()
-
-    def _res_data(self, message):
-        now = time()
-        for address, timestamp in self.clients.copy().items():
-            if now - timestamp < 5:
-                self.sock.sendto(message, address)
+    def _res_data(self, message, index, controller):
+        for address, registration in self.clients.copy().items():
+            if not registration.timed_out:
+                if registration.match(index, controller):
+                    self.sock.sendto(message, address)
             else:
                 print('[udp] Client disconnected: {0[0]}:{0[1]}'.format(address))
                 del self.clients[address]
@@ -106,22 +184,21 @@ class UDPServer:
         else:
             print('[udp] Unknown message type: ' + str(msg_type))
 
-    def report(self, report):
+    def report(self, index, controller, report):
         if len(self.clients) == 0:
             return None
 
+        # Ignore outdated callbacks
+        if index not in self.controllers or self.controllers[index] != controller:
+            return None
+
         data = [
-            0x00,  # pad id
-            0x02,  # state (connected)
-            0x02,  # gyro (full gyro)
-            0x01,  # connection type (usb)
-            0x00, 0x00, 0x00, 0x00, 0x00, 0xff,  # MAC 00:00:00:00:00:FF
-            0xef,  # battery (charged)
+            *self._slot_info(index),
             0x01  # is active (true)
         ]
 
-        data.extend(bytes(struct.pack('<I', self.counter)))
-        self.counter += 1
+        data.extend(bytes(struct.pack('<I', self.counters[index])))
+        self.counters[index] += 1
 
         buttons1 = 0x00
         buttons1 |= report.button_share
@@ -214,7 +291,7 @@ class UDPServer:
         for sensor in sensors:
             data.extend(bytes(struct.pack('<f', float(sensor))))
 
-        self._res_data(bytes(Message('data', data)))
+        self._res_data(bytes(Message('data', data)), index, controller)
 
     def _worker(self):
         while True:
