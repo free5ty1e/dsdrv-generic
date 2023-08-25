@@ -123,8 +123,10 @@ class HidrawUSBDSDevice(HidrawDSDevice):
 
 HID_DEVICES = {
     "Sony Interactive Entertainment Wireless Controller": HidrawUSBDSDevice,
+    "Sony Interactive Entertainment DualSense Wireless Controller": HidrawUSBDSDevice,
     "Sony Computer Entertainment Wireless Controller": HidrawUSBDSDevice,
     "Wireless Controller": HidrawBluetoothDSDevice,
+    "DualSense Wireless Controller": HidrawBluetoothDSDevice,
 }
 
 
