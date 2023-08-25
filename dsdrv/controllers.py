@@ -45,6 +45,7 @@ class controllers(Enum):
 products = {
     "09cc": controllers.DualShock4,
     "054c": controllers.DualShock4,
+    "05c4": controllers.DualShock4,
     "0ce6": controllers.DualSense
 }
 
