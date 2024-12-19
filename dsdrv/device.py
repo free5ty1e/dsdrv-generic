@@ -203,15 +203,15 @@ class DSDevice(object):
             (buf[self.controller.value.trackpadps] &
              2) != 0, (buf[self.controller.value.trackpadps] & 1) != 0,
 
-            # Acceleration
-            S16LE.unpack_from(buf, self.controller.value.accel_start)[0],
-            S16LE.unpack_from(buf, self.controller.value.accel_start+2)[0],
-            S16LE.unpack_from(buf, self.controller.value.accel_start+4)[0],
+            # # Acceleration
+            # S16LE.unpack_from(buf, self.controller.value.accel_start)[0],
+            # S16LE.unpack_from(buf, self.controller.value.accel_start+2)[0],
+            # S16LE.unpack_from(buf, self.controller.value.accel_start+4)[0],
 
-            # Orientation
-            -(S16LE.unpack_from(buf, self.controller.value.gyro_start)[0]),
-            S16LE.unpack_from(buf, self.controller.value.gyro_start+2)[0],
-            S16LE.unpack_from(buf, self.controller.value.gyro_start+4)[0],
+            # # Orientation
+            # -(S16LE.unpack_from(buf, self.controller.value.gyro_start)[0]),
+            # S16LE.unpack_from(buf, self.controller.value.gyro_start+2)[0],
+            # S16LE.unpack_from(buf, self.controller.value.gyro_start+4)[0],
 
             # Trackpad touch 1: id, active, x, y
             buf[self.controller.value.touchpad_start] & 0x7f, (
