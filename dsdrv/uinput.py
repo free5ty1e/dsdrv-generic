@@ -72,6 +72,7 @@ create_mapping(
         "ABS_RZ":       "right_analog_y",
         "ABS_RX":       "l2_analog",
         "ABS_RY":       "r2_analog",
+        # TODO: disable sensors on a config parameter instead of commenting out
         # "ABS_THROTTLE": "orientation_roll",
         # "ABS_RUDDER":   "orientation_pitch",
         # "ABS_WHEEL":    "orientation_yaw",
@@ -81,6 +82,7 @@ create_mapping(
     },
     # Axes options
     {
+        # TODO: disable sensors on a config parameter instead of commenting out
         # "ABS_THROTTLE": (0, -16385, 16384, 0, 0),
         # "ABS_RUDDER":   (0, -16385, 16384, 0, 0),
         # "ABS_WHEEL":    (0, -16385, 16384, 0, 0),

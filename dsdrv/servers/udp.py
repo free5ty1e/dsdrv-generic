@@ -279,6 +279,7 @@ class UDPServer:
 
         data.extend(bytes(struct.pack('<Q', int(time() * 10**6))))
 
+        # TODO: disable sensors on a config parameter instead of commenting out
         # sensors = [
         #     report.orientation_roll / 8192,
         #     - report.orientation_yaw / 8192,

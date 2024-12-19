@@ -44,6 +44,7 @@ class DSReport(object):
                  "button_options",
                  "button_trackpad",
                  "button_ps",
+                 # TODO: disable sensors on a config parameter instead of commenting out
                 #  "motion_y",
                 #  "motion_x",
                 #  "motion_z",
@@ -203,6 +204,7 @@ class DSDevice(object):
             (buf[self.controller.value.trackpadps] &
              2) != 0, (buf[self.controller.value.trackpadps] & 1) != 0,
 
+            # TODO: disable sensors on a config parameter instead of commenting out
             # # Acceleration
             # S16LE.unpack_from(buf, self.controller.value.accel_start)[0],
             # S16LE.unpack_from(buf, self.controller.value.accel_start+2)[0],
