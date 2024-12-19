@@ -279,17 +279,17 @@ class UDPServer:
 
         data.extend(bytes(struct.pack('<Q', int(time() * 10**6))))
 
-        sensors = [
-            report.orientation_roll / 8192,
-            - report.orientation_yaw / 8192,
-            - report.orientation_pitch / 8192,
-            report.motion_y / 16,
-            - report.motion_x / 16,
-            - report.motion_z / 16,
-        ]
+        # sensors = [
+        #     report.orientation_roll / 8192,
+        #     - report.orientation_yaw / 8192,
+        #     - report.orientation_pitch / 8192,
+        #     report.motion_y / 16,
+        #     - report.motion_x / 16,
+        #     - report.motion_z / 16,
+        # ]
 
-        for sensor in sensors:
-            data.extend(bytes(struct.pack('<f', float(sensor))))
+        # for sensor in sensors:
+        #     data.extend(bytes(struct.pack('<f', float(sensor))))
 
         self._res_data(bytes(Message('data', data)), index, controller)
 
