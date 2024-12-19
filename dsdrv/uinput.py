@@ -61,7 +61,8 @@ def create_mapping(name, description, bustype=0, vendor=0, product=0,
 
 # Pre-configued mappings
 create_mapping(
-    "ds4", "Sony Computer Entertainment Wireless Controller",
+    # "ds4", "Sony Computer Entertainment Wireless Controller",
+    "ds4", "DS4DRV Controller DS4 Mode",
     # Bus type,     vendor, product, version
     ecodes.BUS_USB, 1356,   1476,    273,
     # Axes
